@@ -113,7 +113,18 @@ class VisionCameraBarcodesScannerModule(
             }
             return map
         }
+
+        private fun decodeWithUniversalDetector(rawValue: String): String {
+            return if (!containsCyrillic(rawValue)) {
+                val bytes = rawValue.toByteArray(Charsets.ISO_8859_1)
+                String(bytes, charset("Windows-1251"))
+            } else {
+                rawValue
+            }
+        }
+
+        private fun containsCyrillic(input: String): Boolean {
+            return input.any { it in 'А'..'я' }
+        }
     }
 }
-
-

@@ -16,8 +16,6 @@ Pod::Spec.new do |s|
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 
-  s.dependency "React-Core"
+  install_modules_dependencies(s)
   s.dependency "VisionCamera"
-  s.dependency "GoogleMLKit/BarcodeScanning"
-
 end

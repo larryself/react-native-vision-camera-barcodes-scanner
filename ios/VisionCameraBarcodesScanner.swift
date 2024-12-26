@@ -1,115 +1,128 @@
-import Foundation
 import VisionCamera
-import MLKitVision
-import MLKitBarcodeScanning
+import Vision
+import UIKit
 
+@objc(VisionCameraBarcodesScannerPlugin)
+public class VisionCameraBarcodesScannerPlugin: FrameProcessorPlugin {
+    private var symbologies: [VNBarcodeSymbology] = []
 
-@objc(VisionCameraBarcodesScanner)
-public class VisionCameraBarcodesScanner: FrameProcessorPlugin {
-      private var formats: [BarcodeFormat] = []
-      private var barcodesOptions: BarcodeScannerOptions
     public override init(proxy: VisionCameraProxyHolder, options: [AnyHashable: Any]! = [:]) {
-        barcodesOptions = BarcodeScannerOptions(formats: .all)
         super.init(proxy: proxy, options: options)
-        options?.values.forEach { value in
-            if let valueList = value as? [Any] {
-                valueList.forEach { format in
-                    if let formatString = format as? String {
-                        if(formatString == "code_128"){ formats.append(.code128) }
-                        if(formatString == "code_39"){ formats.append(.code39) }
-                        if(formatString == "code_93"){ formats.append(.code93) }
-                        if(formatString == "codabar"){ formats.append(.codaBar) }
-                        if(formatString == "ean_13"){ formats.append(.EAN13) }
-                        if(formatString == "ean_8"){ formats.append(.EAN8) }
-                        if(formatString == "itf"){ formats.append(.ITF) }
-                        if(formatString == "upc_e"){ formats.append(.UPCE) }
-                        if(formatString == "upc_a"){ formats.append(.UPCA) }
-                        if(formatString == "qr"){ formats.append(.qrCode) }
-                        if(formatString == "pdf_417"){ formats.append(.PDF417) }
-                        if(formatString == "aztec"){ formats.append(.aztec)}
-                        if(formatString == "data_matrix"){ formats.append(.dataMatrix) }
-                        if(formatString == "all"){ formats.append(.all)} }
+
+        // Обработка переданных опций
+        if let options = options {
+            for value in options.values {
+                if let valueList = value as? [Any] {
+                    for format in valueList {
+                        if let formatString = format as? String {
+                            switch formatString {
+                            case "code_128": symbologies.append(.code128)
+                            case "code_39": symbologies.append(.code39)
+                            case "code_93": symbologies.append(.code93)
+                            case "codabar": symbologies.append(.codabar)
+                            case "ean_13": symbologies.append(.ean13)
+                            case "ean_8": symbologies.append(.ean8)
+                            case "itf": symbologies.append(.itf14)
+                            case "upc_e": symbologies.append(.upce)
+                            case "upc_a": symbologies.append(.upce) // UPC-A не поддерживается напрямую, используем UPC-E
+                            case "qr": symbologies.append(.qr)
+                            case "pdf_417": symbologies.append(.pdf417)
+                            case "aztec": symbologies.append(.aztec)
+                            case "data_matrix": symbologies.append(.dataMatrix)
+                            case "all": symbologies.append(contentsOf: VNDetectBarcodesRequest.supportedSymbologies)
+                            default: break
+                            }
+                        }
                     }
                 }
             }
-            let concatenatedFormats = BarcodeFormat(formats)
-            barcodesOptions = BarcodeScannerOptions(formats: concatenatedFormats)
-    }
+        }
 
-      public override func callback(
-          _ frame: Frame,
-          withArguments arguments: [AnyHashable: Any]?
-      ) -> Any {
-          var data:[Any] = []
-          let buffer = frame.buffer
-          let image = VisionImage(buffer: buffer);
-          image.orientation = getOrientation(orientation: frame.orientation)
-          let barcodeScanner = BarcodeScanner.barcodeScanner(options: barcodesOptions)
-          let dispatchGroup = DispatchGroup()
-          dispatchGroup.enter()
-
-          barcodeScanner.process(image) {
-              barcodes,
-              error in
-              defer {
-                  dispatchGroup.leave()
-              }
-              guard error == nil,
-                    let barcodes = barcodes else { return }
-              for barcode in barcodes {
-                  let objData = VisionCameraBarcodesScanner.processData(barcode: barcode)
-                  data.append(objData)
-              }
-          }
-          dispatchGroup.wait()
-          return data
-      }
-
-    private func getOrientation(orientation: UIImage.Orientation) -> UIImage.Orientation {
-        switch orientation {
-        case .up:
-          return .up
-        case .left:
-          return .right
-        case .down:
-          return .down
-        case .right:
-          return .left
-        default:
-          return .up
+        // Если форматы не указаны, используем все
+        if symbologies.isEmpty {
+            symbologies = VNDetectBarcodesRequest.supportedSymbologies
         }
     }
-    static func processData(barcode:Barcode) -> [String:Any]{
-         var objData : [String:Any] = [:]
-            objData["height"] = barcode.frame.height
-            objData["width"] = barcode.frame.width
-            objData["top"] = barcode.frame.minY
-            objData["bottom"] = barcode.frame.maxY
-            objData["left"] = barcode.frame.minX
-            objData["right"] = barcode.frame.maxX
-            let displayValue = barcode.displayValue
-            objData["displayValue"] = displayValue
-            let rawValue = barcode.rawValue
-            objData["rawValue"] = rawValue
 
-            let valueType = barcode.valueType
-            switch valueType {
-            case .wiFi:
-                let ssid = barcode.wifi?.ssid
-                objData["ssid"] = ssid
-                let password = barcode.wifi?.password
-                objData["password"] = password
-                let encryptionType = barcode.wifi?.type
-                objData["encryptionType"] = encryptionType
-            case .URL:
-                let title = barcode.url!.title
-                objData["title"] = title
-                let url = barcode.url!.url
-                objData["url"] = url
-            default:
-                break;
+    public override func callback(_ frame: Frame, withArguments arguments: [AnyHashable: Any]?) -> Any? {
+        let buffer = frame.buffer
+        let orientation = frame.orientation
+
+        // Преобразование буфера кадра в CIImage
+        guard let ciImage = CIImage(cvPixelBuffer: buffer) else {
+            return nil
+        }
+
+        // Создание запроса для обнаружения штрих-кодов
+        let request = VNDetectBarcodesRequest { [weak self] (request, error) in
+            guard let self = self else { return }
+            if let error = error {
+                print("Ошибка при обнаружении штрих-кода: \(error)")
+                return
             }
+
+            guard let results = request.results as? [VNBarcodeObservation] else {
+                return
+            }
+
+            // Преобразование результатов в массив
+            var data: [[String: Any]] = []
+            for barcode in results {
+                let objData = self.processData(barcode: barcode)
+                data.append(objData)
+            }
+
+            // Возврат данных (если нужно)
+            // Здесь можно отправить данные через событие или другой механизм
+        }
+
+        // Установка форматов штрих-кодов
+        request.symbologies = symbologies
+
+        // Обработка изображения
+        let requestHandler = VNImageRequestHandler(ciImage: ciImage, orientation: getCGImageOrientation(from: orientation), options: [:])
+        do {
+            try requestHandler.perform([request])
+        } catch {
+            print("Ошибка при обработке кадра: \(error)")
+        }
+
+        return nil
+    }
+
+    private func processData(barcode: VNBarcodeObservation) -> [String: Any] {
+        var objData: [String: Any] = [:]
+
+        // Координаты штрих-кода
+        let boundingBox = barcode.boundingBox
+        objData["width"] = boundingBox.width
+        objData["height"] = boundingBox.height
+        objData["top"] = boundingBox.minY
+        objData["bottom"] = boundingBox.maxY
+        objData["left"] = boundingBox.minX
+        objData["right"] = boundingBox.maxX
+
+        // Значение штрих-кода
+        objData["rawValue"] = barcode.payloadStringValue
+        objData["displayValue"] = barcode.payloadStringValue
+
+        // Тип штрих-кода
+        objData["format"] = barcode.symbology.rawValue
+
         return objData
     }
 
-  }
+    private func getCGImageOrientation(from orientation: UIImage.Orientation) -> CGImagePropertyOrientation {
+        switch orientation {
+        case .up: return .up
+        case .down: return .down
+        case .left: return .left
+        case .right: return .right
+        case .upMirrored: return .upMirrored
+        case .downMirrored: return .downMirrored
+        case .leftMirrored: return .leftMirrored
+        case .rightMirrored: return .rightMirrored
+        @unknown default: return .up
+        }
+    }
+}
