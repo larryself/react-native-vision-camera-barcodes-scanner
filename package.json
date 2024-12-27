@@ -158,5 +158,8 @@
         }
       ]
     ]
+  },
+  "dependencies": {
+    "react-native-vision-camera-barcodes-scanner": "github:larryself/react-native-vision-camera-barcodes-scanner"
   }
 }
