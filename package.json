@@ -41,14 +41,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gev2002/react-native-vision-camera-barcodes-scanner.git"
+    "url": "git+https://github.com/larryself/react-native-vision-camera-barcodes-scanner.git"
   },
   "author": "gev2002 <gevorg2002@inbox.ru> (https://github.com/gev2002)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/gev2002/react-native-vision-camera-barcodes-scanner/issues"
+    "url": "https://github.com/larryself/react-native-vision-camera-barcodes-scanner/issues"
   },
-  "homepage": "https://github.com/gev2002/react-native-vision-camera-barcodes-scanner#readme",
+  "homepage": "https://github.com/larryself/react-native-vision-camera-barcodes-scanner#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
