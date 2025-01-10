@@ -22,8 +22,13 @@ public class VisionCameraBarcodesScanner: FrameProcessorPlugin {
         withArguments arguments: [AnyHashable: Any]?
     ) -> Any {
         var data: [[String: Any]] = []
-        let buffer = frame.buffer
-        let ciImage = CIImage(cvPixelBuffer: buffer)
+
+        // Извлекаем CVPixelBuffer из CMSampleBuffer
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(frame.buffer) else {
+            return data
+        }
+
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
 
         let request = VNDetectBarcodesRequest { (request, error) in
             guard error == nil, let results = request.results as? [VNBarcodeObservation] else {
@@ -87,6 +92,12 @@ public class VisionCameraBarcodesScanner: FrameProcessorPlugin {
             return .qr
         case "upc-e":
             return .upce
+        case "codabar":
+            if #available(iOS 15.0, *) {
+                return .codabar
+            } else {
+                return nil
+            }
         case "all":
             return nil // Все типы по умолчанию
         default:
