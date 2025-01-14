@@ -91,7 +91,8 @@ class VisionCameraBarcodesScannerModule(
             val rawValue = barcode.rawValue
             map.putString("rawValue", rawValue)
             val displayValue = barcode.displayValue
-            map.putString("displayValue", displayValue)
+            val decodeDisplayValue = decodeWithUniversalDetector(displayValue ?: "")
+            map.putString("displayValue", decodeDisplayValue)
             val valueType = barcode.valueType
 
             when (valueType) {
