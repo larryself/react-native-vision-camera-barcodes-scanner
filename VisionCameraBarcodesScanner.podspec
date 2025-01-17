@@ -18,6 +18,6 @@ Pod::Spec.new do |s|
   s.dependency 'GoogleMLKit/BarcodeScanning'
   s.dependency 'ZXingObjC', '~> 3.6.9'
 
-  install_modules_dependencies(s)
+#   install_modules_dependencies(s)
   s.dependency "VisionCamera"
 end
