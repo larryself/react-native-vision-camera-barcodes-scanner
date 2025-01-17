@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.source       = { :git => "https://github.com/gev2002/react-native-vision-camera-barcodes-scanner.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
-  s.dependency 'GoogleMLKit/BarcodeScanning'
+#   s.dependency 'GoogleMLKit/BarcodeScanning'
   s.dependency 'ZXingObjC', '~> 3.6.9'
 
 #   install_modules_dependencies(s)
