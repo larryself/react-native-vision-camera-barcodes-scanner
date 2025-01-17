@@ -32,6 +32,7 @@ export type Barcode = {
   height: number;
   left: number;
   rawValue: string;
+  displayValue: string;
   right: number;
   top: number;
   width: number;
